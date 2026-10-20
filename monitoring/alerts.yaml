@@ -1,0 +1,23 @@
+groups:
+  - name: llm-gateway
+    rules:
+      - alert: TeamBudgetApproachingCap
+        expr: gateway_budget_utilization >= 0.8
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "Team {{ $labels.team }} has used at least 80 percent of its daily budget"}
+      - alert: ProviderCircuitOpen
+        expr: gateway_circuit_open == 1
+        for: 15s
+        labels: {severity: warning}
+        annotations: {summary: "Provider {{ $labels.provider }} circuit is open or probing"}
+      - alert: HighGatewayErrorRate
+        expr: sum(rate(gateway_requests_total{status!="success"}[5m])) / clamp_min(sum(rate(gateway_requests_total[5m])), 0.01) > 0.1
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "More than 10 percent of admitted chat requests are failing"}
+      - alert: HighGatewayP99
+        expr: histogram_quantile(0.99, sum(rate(gateway_request_seconds_bucket[5m])) by (le)) > 20
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "End to end gateway P99 exceeds 20 seconds"}

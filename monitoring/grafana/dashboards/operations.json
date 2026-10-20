@@ -1,0 +1,9 @@
+{
+  "uid": "gateway-operations", "title": "Gateway Operations", "schemaVersion": 41,
+  "version": 1, "refresh": "5s", "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {"id": 1, "title": "Circuit state", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "gateway_circuit_open", "legendFormat": "{{provider}}"}]},
+    {"id": 2, "title": "Provider attempt outcomes", "type": "timeseries", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "sum by(provider,outcome) (rate(gateway_provider_attempts_total[1m]))", "legendFormat": "{{provider}} {{outcome}}"}]},
+    {"id": 3, "title": "Fallbacks per second", "type": "timeseries", "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "rate(gateway_fallback_total[1m])", "legendFormat": "{{model}}"}]}
+  ]
+}

@@ -1,0 +1,65 @@
+# Local development only. Public demo credentials and ports bound to loopback.
+services:
+  gateway:
+    build: .
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      GATEWAY_CONFIG: config/demo.yaml
+      GATEWAY_STATE_BACKEND: redis
+      REDIS_URL: redis://redis:6379/0
+      GATEWAY_ADMIN_KEY: demo-admin-key-change-me
+      GATEWAY_METRICS_KEY: demo-metrics-key-change-me
+      DEMO_TEAM_KEY: demo-team-key-change-me
+      ANALYST_TEAM_KEY: demo-analyst-key-change-me
+      MOCK_BASE_URL: http://mock:9001/v1
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318/v1/traces
+    volumes: ["audit:/app/data"]
+    depends_on:
+      redis: {condition: service_healthy}
+      mock: {condition: service_started}
+      otel: {condition: service_started}
+  mock:
+    build: .
+    command: ["python", "-m", "gateway.cli", "mock", "--host", "0.0.0.0", "--port", "9001"]
+    environment:
+      GATEWAY_ADMIN_KEY: demo-admin-key-change-me
+    ports: ["127.0.0.1:9001:9001"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9001/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always", "--maxmemory-policy", "noeviction"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes: ["./monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro", "./monitoring/alerts.yaml:/etc/prometheus/alerts.yaml:ro"]
+    ports: ["127.0.0.1:9090:9090"]
+    depends_on: [gateway]
+  grafana:
+    image: grafana/grafana:12.2.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: demo-password-change-me
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes: ["./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro", "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"]
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [prometheus]
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    volumes: ["./monitoring/alertmanager.yaml:/etc/alertmanager/alertmanager.yml:ro"]
+    ports: ["127.0.0.1:9093:9093"]
+  otel:
+    image: otel/opentelemetry-collector:0.130.1
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes: ["./monitoring/otel.yaml:/etc/otel/config.yaml:ro"]
+volumes:
+  audit:
+  redis-data:

@@ -1,0 +1,86 @@
+# A SEPARATE local project: never replace the existing PostgreSQL service on 5432.
+# All passwords below are public DEVELOPMENT defaults. Do not expose these ports.
+name: llm-gateway-local
+
+x-audit-environment: &audit-environment
+  GATEWAY_AUDIT_BACKEND: postgres
+  DATABASE_URL: postgresql+psycopg://gateway:local-gateway-db-change-me@postgres:5432/llm_gateway
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: llm_gateway
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: local-gateway-db-change-me
+    ports: ["127.0.0.1:55433:5432"]
+    # PostgreSQL 18 uses a version-specific PGDATA under this parent volume.
+    volumes: ["postgres-data:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway -d llm_gateway"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  migrate:
+    build: .
+    image: llm-gateway-local:dev
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    environment: *audit-environment
+    healthcheck: {disable: true}
+    depends_on:
+      postgres: {condition: service_healthy}
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:56379:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  gateway:
+    build: .
+    image: llm-gateway-local:dev
+    ports: ["127.0.0.1:8080:8000"]
+    environment:
+      <<: *audit-environment
+      GATEWAY_CONFIG: config/ollama.yaml
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      GATEWAY_STATE_BACKEND: redis
+      REDIS_URL: redis://redis:6379/0
+      GATEWAY_NAMESPACE: llmgw-local
+      GATEWAY_ADMIN_KEY: demo-admin-key-change-me
+      GATEWAY_METRICS_KEY: demo-metrics-key-change-me
+      DEMO_TEAM_KEY: demo-team-key-change-me
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318/v1/traces
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      otel: {condition: service_started}
+  otel:
+    image: otel/opentelemetry-collector:0.130.1
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes: ["./monitoring/otel.yaml:/etc/otel/config.yaml:ro"]
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes: ["./monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro", "./monitoring/alerts.yaml:/etc/prometheus/alerts.yaml:ro"]
+    ports: ["127.0.0.1:9091:9090"]
+    depends_on: [gateway, alertmanager]
+  grafana:
+    image: grafana/grafana:12.2.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: demo-password-change-me
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes: ["./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro", "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"]
+    ports: ["127.0.0.1:3001:3000"]
+    depends_on: [prometheus]
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    volumes: ["./monitoring/alertmanager.yaml:/etc/alertmanager/alertmanager.yml:ro"]
+    ports: ["127.0.0.1:9094:9093"]
+
+volumes:
+  postgres-data:
+  redis-data:

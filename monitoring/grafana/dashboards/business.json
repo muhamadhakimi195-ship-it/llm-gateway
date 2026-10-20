@@ -1,0 +1,8 @@
+{
+  "uid": "gateway-business", "title": "Gateway Business", "schemaVersion": 41,
+  "version": 1, "refresh": "5s", "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {"id": 1, "title": "Daily budget utilization", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "gateway_budget_utilization", "legendFormat": "{{team}}"}], "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []}},
+    {"id": 2, "title": "Accounted spend since worker start USD", "type": "timeseries", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "sum by(team,estimated) (gateway_accounted_microusd_total) / 1000000", "legendFormat": "{{team}} estimated={{estimated}}"}]}
+  ]
+}

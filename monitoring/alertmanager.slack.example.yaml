@@ -1,0 +1,12 @@
+# Optional template. Never commit the webhook file. Configure only with approval
+# from the Slack workspace owner; the shipped local stack sends no Slack messages.
+route:
+  receiver: slack
+  group_by: [alertname, team, provider]
+receivers:
+  - name: slack
+    slack_configs:
+      - api_url_file: /run/secrets/slack_webhook
+        send_resolved: true
+        title: 'LLM Gateway {{ .Status }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ "\n" }}{{ end }}'

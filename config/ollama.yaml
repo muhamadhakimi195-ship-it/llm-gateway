@@ -1,0 +1,22 @@
+# Local model inference has no metered API fee here; electricity/hardware are not accounted.
+providers:
+  local:
+    kind: ollama
+    base_url: http://127.0.0.1:11434
+    base_url_env: OLLAMA_BASE_URL
+    model: qwen3:4b-instruct-2507-q4_K_M
+    input_usd_per_million: 0.0
+    output_usd_per_million: 0.0
+routes:
+  balanced: [local]
+teams:
+  demo:
+    api_key_env: DEMO_TEAM_KEY
+    policy:
+      allowed_models: [balanced]
+      requests_per_minute: 30
+      tokens_per_minute: 100000
+      daily_budget_microusd: 0
+provider_timeout_seconds: 60.0
+request_deadline_seconds: 120.0
+retry_count: 0

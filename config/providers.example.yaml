@@ -1,0 +1,27 @@
+# Replace model IDs and zero price placeholders with verified values for your account.
+# This file is a configuration template; do not treat it as a pricing source.
+providers:
+  compatible:
+    kind: compatible
+    base_url: https://your-provider.example/v1
+    api_key_env: COMPATIBLE_API_KEY
+    model: replace-with-model-id
+    input_usd_per_million: 0.0
+    output_usd_per_million: 0.0
+  anthropic:
+    kind: anthropic
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+    model: replace-with-model-id
+    input_usd_per_million: 0.0
+    output_usd_per_million: 0.0
+routes:
+  balanced: [compatible, anthropic]
+teams:
+  demo:
+    api_key_env: DEMO_TEAM_KEY
+    policy:
+      allowed_models: [balanced]
+      requests_per_minute: 60
+      tokens_per_minute: 100000
+      daily_budget_microusd: 5000000

@@ -1,0 +1,9 @@
+route:
+  receiver: local-only
+  group_by: [alertname, team, provider]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+receivers:
+  - name: local-only
+# Local UI receives alerts; no external notifications are sent by default.

@@ -1,0 +1,9 @@
+{
+  "uid": "gateway-performance", "title": "Gateway Performance", "schemaVersion": 41,
+  "version": 1, "refresh": "5s", "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {"id": 1, "title": "End to end latency percentiles seconds", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "histogram_quantile(0.5,sum(rate(gateway_request_seconds_bucket[1m])) by(le))", "legendFormat": "P50"}, {"expr": "histogram_quantile(0.95,sum(rate(gateway_request_seconds_bucket[1m])) by(le))", "legendFormat": "P95"}, {"expr": "histogram_quantile(0.99,sum(rate(gateway_request_seconds_bucket[1m])) by(le))", "legendFormat": "P99"}]},
+    {"id": 2, "title": "Reported token throughput", "type": "timeseries", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "sum by(direction) (rate(gateway_tokens_total[1m]))", "legendFormat": "{{direction}}"}]},
+    {"id": 3, "title": "Completed chat requests per second", "type": "timeseries", "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "sum by(status) (rate(gateway_requests_total[1m]))", "legendFormat": "{{status}}"}]}
+  ]
+}
